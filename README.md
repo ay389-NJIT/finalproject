@@ -13,8 +13,8 @@
 - **Docker Deployment:** Multi-container setup with PostgreSQL database
 - **CI/CD Pipeline:** Automated testing and Docker Hub deployment via GitHub Actions
 ---
-**Additional Features**
-- **Expontential Capabilities:**
+# Additional Features
+**Expontential Capabilities:**
 - Calculate base^exponent
 - Support for positive exponents
 - Support for zero exponent
@@ -22,7 +22,7 @@
 - Support for fractional exponents
 - Requires exactly two inputs
 ---
-- **Square Root Capabilites:**
+**Square Root Capabilites:**
 - Calculate square root of positive numbers
 - Perfect squares
 - Non-perfect squares
