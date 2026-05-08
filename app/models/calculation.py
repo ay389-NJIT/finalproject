@@ -179,6 +179,7 @@ class AbstractCalculation:
             'multiplication': Multiplication,
             'division': Division,
             'power': Power,
+            'square_root': SquareRoot,
         }
         calculation_class = calculation_classes.get(calculation_type.lower())
         if not calculation_class:
@@ -389,3 +390,41 @@ class Power(Calculation):
         
         base, exponent = self.inputs[0], self.inputs[1]
         return base ** exponent
+    
+class SquareRoot(Calculation):
+    """
+    Square Root calculation subclass.
+    
+    Implements square root of a single number.
+    Examples:
+        [16] -> √16 = 4
+        [2] -> √2 = 1.414...
+        [0] -> √0 = 0
+    """
+    __mapper_args__ = {"polymorphic_identity": "square_root"}
+
+    def get_result(self) -> float:
+        """
+        Calculate the square root of the input value.
+        
+        Takes exactly 1 number and returns its square root.
+        
+        Returns:
+            float: Square root of the input
+            
+        Raises:
+            ValueError: If inputs are not a list, if not exactly 1 number provided,
+                       or if attempting square root of negative number
+        """
+        if not isinstance(self.inputs, list):
+            raise ValueError("Inputs must be a list of numbers.")
+        if len(self.inputs) != 1:
+            raise ValueError("Square root operation requires exactly one number.")
+        
+        value = self.inputs[0]
+        
+        # Cannot take square root of negative number (would be complex)
+        if value < 0:
+            raise ValueError("Cannot calculate square root of a negative number.")
+        
+        return value ** 0.5

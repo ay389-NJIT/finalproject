@@ -37,6 +37,7 @@ class CalculationType(str, Enum):
     MULTIPLICATION = "multiplication"
     DIVISION = "division"
     POWER = "power"
+    SQUARE_ROOT = "square_root"
 
 class CalculationBase(BaseModel):
     """
@@ -125,12 +126,17 @@ class CalculationBase(BaseModel):
         Raises:
             ValueError: If validation fails
         """
+        # Square root requires exactly 1 input
+        if self.type == CalculationType.SQUARE_ROOT:
+            if len(self.inputs) != 1:
+                raise ValueError("Square root operation requires exactly one number")
         # Power operation requires exactly 2 inputs
-        if self.type == CalculationType.POWER:
+        elif self.type == CalculationType.POWER:
             if len(self.inputs) != 2:
                 raise ValueError("Power operation requires exactly two numbers: base and exponent")
-        if len(self.inputs) < 2:
+        elif len(self.inputs) < 2:
             raise ValueError("At least two numbers are required for calculation")
+        
         if self.type == CalculationType.DIVISION:
             # Prevent division by zero (skip the first value as numerator)
             if any(x == 0 for x in self.inputs[1:]):

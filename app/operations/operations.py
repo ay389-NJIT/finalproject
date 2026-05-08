@@ -139,3 +139,33 @@ def power(base: float, exponent: float) -> float:
         0.25
     """
     return base ** exponent
+
+def square_root(value: float) -> float:
+    """
+    Calculate the square root of a number.
+    
+    Args:
+        value: The number to find the square root of
+        
+    Returns:
+        float: The square root of the value
+        
+    Raises:
+        ValueError: If value is negative
+        
+    Examples:
+        >>> square_root(16)
+        4.0
+        >>> square_root(2)
+        1.4142135623730951
+        >>> square_root(0)
+        0.0
+        >>> square_root(-4)
+        Traceback (most recent call last):
+            ...
+        ValueError: Cannot calculate square root of a negative number
+    """
+    if value < 0:
+        raise ValueError("Cannot calculate square root of a negative number")
+    
+    return value ** 0.5
