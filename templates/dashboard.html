@@ -403,6 +403,7 @@ document.addEventListener('DOMContentLoaded', function() {
             row.style.opacity = '0';
             setTimeout(() => {
               loadCalculations();
+              loadStatistics();
             }, 500);
             
           } catch (err) {
@@ -437,6 +438,63 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Add retry button functionality
       document.getElementById('retryButton')?.addEventListener('click', loadCalculations);
+    }
+  }
+
+  // Load statistics
+  async function loadStatistics() {
+    try {
+      const response = await fetch('/api/stats', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to load statistics');
+      }
+      
+      const stats = await response.json();
+      
+      // Update statistics display
+      document.getElementById('totalCalcs').textContent = stats.total_calculations || 0;
+      document.getElementById('mostUsed').textContent = stats.most_used_operation ? 
+        stats.most_used_operation.replace('_', ' ') : '-';
+      document.getElementById('avgOperands').textContent = 
+        stats.average_operands ? stats.average_operands.toFixed(2) : '0.00';
+      
+      // Update operations breakdown
+      const breakdownDiv = document.getElementById('operationsBreakdown');
+      if (Object.keys(stats.calculations_by_type).length > 0) {
+        breakdownDiv.innerHTML = '';
+        for (const [type, count] of Object.entries(stats.calculations_by_type)) {
+          const percentage = (count / stats.total_calculations) * 100;
+          const bar = document.createElement('div');
+          bar.className = 'mb-3';
+          bar.innerHTML = `
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-sm font-medium text-gray-700 capitalize">
+                ${type.replace('_', ' ')}
+              </span>
+              <span class="text-sm font-semibold text-gray-900">${count}</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-5 overflow-hidden">
+              <div 
+                class="bg-blue-700 h-5 rounded-full transition-all duration-500 ease-out
+                       flex items-center justify-end pr-2" 
+                style="width: ${percentage}%"
+              >
+                <span class="text-xs text-white font-medium">
+                  ${percentage.toFixed(0)}%
+                </span>
+              </div>
+            </div>
+          `;
+          breakdownDiv.appendChild(bar);
+        }
+      } else {
+        breakdownDiv.innerHTML = '<p class="text-gray-500 text-center py-4">No calculations yet</p>';
+      }
+    } catch (error) {
+      console.error('Error loading statistics:', error);
     }
   }
 
@@ -504,6 +562,7 @@ document.addEventListener('DOMContentLoaded', function() {
       showSuccess(`Calculation complete: ${result.result}`);
       form.reset();
       loadCalculations();
+      loadStatistics();
       
       // Add a highlight effect to the table to draw attention to the new entry
       setTimeout(() => {
@@ -527,6 +586,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Initial load
   loadCalculations();
+  loadStatistics();
   
   // Optional features:
   
