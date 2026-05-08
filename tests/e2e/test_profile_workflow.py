@@ -14,21 +14,22 @@ Demonstrates:
 import pytest
 import re
 from playwright.sync_api import Page, expect
-
+import uuid
 
 # Base URL for the application
-BASE_URL = "http://localhost:8001"
+BASE_URL = "http://localhost:8000"
 
 
 @pytest.fixture(scope="function")
 def test_user():
-    """Test user credentials"""
+    """Test user credentials - unique for each test"""
+    unique_id = str(uuid.uuid4())[:8]
     return {
         "first_name": "E2E",
         "last_name": "TestUser",
-        "email": "e2e@example.com",
-        "username": "e2euser",
-        "password": "TestPass123"
+        "email": f"e2e_{unique_id}@example.com",
+        "username": f"e2euser_{unique_id}",
+        "password": "TestPass123!"
     }
 
 
@@ -107,7 +108,7 @@ class TestProfileManagementFlow:
         page.goto(f"{BASE_URL}/profile")
         
         # Change password
-        new_password = "NewTestPass456"
+        new_password = "NewTestPass456!"
         
         page.fill('#currentPassword', test_user["password"])
         page.fill('#newPassword', new_password)
@@ -172,8 +173,8 @@ class TestProfileManagementFlow:
         
         # Enter mismatched passwords
         page.fill('#currentPassword', test_user["password"])
-        page.fill('#newPassword', 'NewPass123')
-        page.fill('#confirmPassword', 'DifferentPass456')
+        page.fill('#newPassword', 'NewPass123!')
+        page.fill('#confirmPassword', 'DifferentPass456!')
         page.click('#passwordForm button[type="submit"]')
         
         # Should show error message
@@ -188,9 +189,9 @@ class TestProfileManagementFlow:
         page.goto(f"{BASE_URL}/profile")
         
         # Enter wrong current password
-        page.fill('#currentPassword', 'WrongPassword123')
-        page.fill('#newPassword', 'NewPass456')
-        page.fill('#confirmPassword', 'NewPass456')
+        page.fill('#currentPassword', 'WrongPassword123!')
+        page.fill('#newPassword', 'NewPass456!')
+        page.fill('#confirmPassword', 'NewPass456!')
         page.click('#passwordForm button[type="submit"]')
         
         # Should show error message

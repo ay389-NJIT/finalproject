@@ -32,7 +32,7 @@ from sqlalchemy.orm import Session  # SQLAlchemy database session
 import uvicorn  # ASGI server for running FastAPI apps
 
 # Application imports
-from app.auth.dependencies import get_current_active_user  # Authentication dependency
+from app.auth.dependencies import get_current_active_user, get_current_user_from_db
 from app.models.calculation import Calculation  # Database model for calculations
 from app.models.user import User  # Database model for users
 from app.schemas.calculation import CalculationBase, CalculationResponse, CalculationUpdate  # API request/response schemas
@@ -404,8 +404,7 @@ def profile_page(request: Request):
 
 @app.get("/api/profile", response_model=UserResponse, tags=["profile"])
 def get_profile(
-    current_user = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user_from_db)
 ):
     """Get current user profile."""
     return current_user
@@ -414,20 +413,23 @@ def get_profile(
 @app.put("/api/profile", response_model=UserResponse, tags=["profile"])
 def update_profile(
     user_update: UserUpdate,
-    current_user = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_user_from_db),
     db: Session = Depends(get_db)
 ):
     """Update user profile information."""
+    # Check email uniqueness
     if user_update.email and user_update.email != current_user.email:
-        existing_user = db.query(User).filter(User.email == user_update.email).first()
-        if existing_user:
+        existing = db.query(User).filter(User.email == user_update.email).first()
+        if existing:
             raise HTTPException(status_code=400, detail="Email already registered")
     
+    # Check username uniqueness  
     if user_update.username and user_update.username != current_user.username:
-        existing_user = db.query(User).filter(User.username == user_update.username).first()
-        if existing_user:
+        existing = db.query(User).filter(User.username == user_update.username).first()
+        if existing:
             raise HTTPException(status_code=400, detail="Username already taken")
     
+    # Update fields
     if user_update.first_name is not None:
         current_user.first_name = user_update.first_name
     if user_update.last_name is not None:
@@ -446,18 +448,20 @@ def update_profile(
 @app.put("/api/profile/password", tags=["profile"])
 def update_password(
     password_update: PasswordUpdate,
-    current_user = Depends(get_current_active_user),
+    current_user: User = Depends(get_current_user_from_db),
     db: Session = Depends(get_db)
 ):
     """Update user password."""
-    if not User.verify_password(password_update.current_password, current_user.hashed_password):
+    # Verify current password
+    if not current_user.verify_password(password_update.current_password):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
     
-    current_user.hashed_password = User.hash_password(password_update.new_password)
+    # Update password - use 'password' column, not 'hashed_password' property
+    current_user.password = User.hash_password(password_update.new_password)
     current_user.updated_at = datetime.utcnow()
     db.commit()
+    
     return {"message": "Password updated successfully"}
-
 
 # ------------------------------------------------------------------------------
 # Main Block to Run the Server

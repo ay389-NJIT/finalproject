@@ -2,8 +2,10 @@ from datetime import datetime
 from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
 from app.schemas.user import UserResponse
 from app.models.user import User
+from app.database import get_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
@@ -79,3 +81,37 @@ def get_current_active_user(
             detail="Inactive user"
         )
     return current_user
+
+
+# NEW FUNCTION FOR PROFILE MANAGEMENT
+def get_current_user_from_db(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> User:
+    """
+    Dependency to get the current user from database.
+    Used for profile management where we need the actual User model.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    # Verify token and get user ID
+    user_id = User.verify_token(token)
+    if user_id is None:
+        raise credentials_exception
+
+    # Fetch actual user from database
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise credentials_exception
+    
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Inactive user"
+        )
+    
+    return user
