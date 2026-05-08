@@ -99,8 +99,8 @@ jobs:
         with:
           push: true
           tags: |
-            aviyalamnjit/601_module14:latest
-            aviyalamnjit/601_module14:${{ github.sha }}
+            aviyalamnjit/601_finalproject:latest
+            aviyalamnjit/601_finalproject:${{ github.sha }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=registry,ref=aviyalamnjit/601_module14:cache
+          cache-from: type=registry,ref=aviyalamnjit/601_finalproject:cache
           cache-to: type=inline,mode=max
