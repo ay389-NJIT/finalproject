@@ -1,43 +1,15 @@
 """
 Integration Tests for Profile Management API Routes
 
-Tests profile endpoints with real database interactions.
+Tests profile endpoints using shared database fixtures from conftest.py.
 """
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 from app.main import app
-from app.database import Base, get_db
-from app.models.user import User
 
 
-# Test database setup
-TEST_DATABASE_URL = "sqlite:///./test_profile.db"
-engine = create_engine(TEST_DATABASE_URL, connect_args={"check_same_thread": False})
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def override_get_db():
-    """Override database dependency for testing"""
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
-
-
-@pytest.fixture(autouse=True)
-def setup_database():
-    """Create fresh database for each test"""
-    Base.metadata.create_all(bind=engine)
-    yield
-    Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture
@@ -54,11 +26,13 @@ def test_user_data():
 
 
 @pytest.fixture
-def authenticated_user(test_user_data):
+def authenticated_user(db_session, test_user_data):
     """Create user and return authentication token"""
-    # Register user
-    response = client.post("/auth/register", json=test_user_data)
-    assert response.status_code == 201
+    from app.models.user import User
+    
+    # Register user using User.register (same pattern as original tests)
+    user = User.register(db_session, test_user_data)
+    db_session.commit()
     
     # Login to get token
     login_data = {
@@ -72,14 +46,15 @@ def authenticated_user(test_user_data):
     return {
         "token": token,
         "headers": {"Authorization": f"Bearer {token}"},
-        "original_data": test_user_data
+        "original_data": test_user_data,
+        "user": user
     }
 
 
 class TestGetProfile:
     """Test GET /api/profile endpoint"""
     
-    def test_get_profile_success(self, authenticated_user):
+    def test_get_profile_success(self, db_session, authenticated_user):
         """Test retrieving user profile"""
         response = client.get("/api/profile", headers=authenticated_user["headers"])
         
@@ -102,12 +77,12 @@ class TestGetProfile:
         assert data["email"] == authenticated_user["original_data"]["email"]
         assert data["first_name"] == authenticated_user["original_data"]["first_name"]
     
-    def test_get_profile_unauthenticated(self):
+    def test_get_profile_unauthenticated(self, db_session):
         """Test profile access without authentication"""
         response = client.get("/api/profile")
         assert response.status_code == 401
     
-    def test_get_profile_invalid_token(self):
+    def test_get_profile_invalid_token(self, db_session):
         """Test profile access with invalid token"""
         headers = {"Authorization": "Bearer invalid_token_12345"}
         response = client.get("/api/profile", headers=headers)
@@ -117,7 +92,7 @@ class TestGetProfile:
 class TestUpdateProfile:
     """Test PUT /api/profile endpoint"""
     
-    def test_update_first_name_only(self, authenticated_user):
+    def test_update_first_name_only(self, db_session, authenticated_user):
         """Test partial update - first name only"""
         update_data = {"first_name": "Updated"}
         response = client.put(
@@ -131,7 +106,7 @@ class TestUpdateProfile:
         assert data["first_name"] == "Updated"
         assert data["last_name"] == authenticated_user["original_data"]["last_name"]
     
-    def test_update_multiple_fields(self, authenticated_user):
+    def test_update_multiple_fields(self, db_session, authenticated_user):
         """Test updating multiple fields at once"""
         update_data = {
             "first_name": "NewFirst",
@@ -150,10 +125,12 @@ class TestUpdateProfile:
         assert data["last_name"] == "NewLast"
         assert data["email"] == "newemail@example.com"
     
-    def test_update_email_duplicate(self, authenticated_user):
+    def test_update_email_duplicate(self, db_session, authenticated_user):
         """Test updating to an email that already exists"""
+        from app.models.user import User
+        
         # Create second user
-        second_user = {
+        second_user_data = {
             "first_name": "Second",
             "last_name": "User",
             "email": "second@example.com",
@@ -161,7 +138,8 @@ class TestUpdateProfile:
             "password": "TestPass123!",
             "confirm_password": "TestPass123!"
         }
-        client.post("/auth/register", json=second_user)
+        User.register(db_session, second_user_data)
+        db_session.commit()
         
         # Try to update first user's email to second user's email
         update_data = {"email": "second@example.com"}
@@ -174,10 +152,12 @@ class TestUpdateProfile:
         assert response.status_code == 400
         assert "already registered" in response.json()["detail"].lower()
     
-    def test_update_username_duplicate(self, authenticated_user):
+    def test_update_username_duplicate(self, db_session, authenticated_user):
         """Test updating to a username that already exists"""
+        from app.models.user import User
+        
         # Create second user
-        second_user = {
+        second_user_data = {
             "first_name": "Second",
             "last_name": "User",
             "email": "second@example.com",
@@ -185,7 +165,8 @@ class TestUpdateProfile:
             "password": "TestPass123!",
             "confirm_password": "TestPass123!"
         }
-        client.post("/auth/register", json=second_user)
+        User.register(db_session, second_user_data)
+        db_session.commit()
         
         # Try to update first user's username to second user's username
         update_data = {"username": "seconduser"}
@@ -198,7 +179,7 @@ class TestUpdateProfile:
         assert response.status_code == 400
         assert "already taken" in response.json()["detail"].lower()
     
-    def test_update_profile_invalid_email(self, authenticated_user):
+    def test_update_profile_invalid_email(self, db_session, authenticated_user):
         """Test updating with invalid email format"""
         update_data = {"email": "not-a-valid-email"}
         response = client.put(
@@ -209,13 +190,13 @@ class TestUpdateProfile:
         
         assert response.status_code == 422  # Validation error
     
-    def test_update_profile_unauthenticated(self):
+    def test_update_profile_unauthenticated(self, db_session):
         """Test profile update without authentication"""
         update_data = {"first_name": "Hacker"}
         response = client.put("/api/profile", json=update_data)
         assert response.status_code == 401
     
-    def test_update_same_email_allowed(self, authenticated_user):
+    def test_update_same_email_allowed(self, db_session, authenticated_user):
         """Test that updating to same email doesn't fail"""
         # Get current email
         current_email = authenticated_user["original_data"]["email"]
@@ -230,7 +211,7 @@ class TestUpdateProfile:
         # Should succeed - user can "update" to their own email
         assert response.status_code == 200
     
-    def test_update_profile_updated_at_timestamp(self, authenticated_user):
+    def test_update_profile_updated_at_timestamp(self, db_session, authenticated_user):
         """Test that updated_at timestamp changes after update"""
         # Get original timestamp
         response = client.get("/api/profile", headers=authenticated_user["headers"])
@@ -252,7 +233,7 @@ class TestUpdateProfile:
 class TestUpdatePassword:
     """Test PUT /api/profile/password endpoint"""
     
-    def test_password_change_success(self, authenticated_user):
+    def test_password_change_success(self, db_session, authenticated_user):
         """Test successful password change"""
         password_data = {
             "current_password": "TestPass123!",
@@ -268,7 +249,7 @@ class TestUpdatePassword:
         assert response.status_code == 200
         assert "successfully" in response.json()["message"].lower()
     
-    def test_password_change_wrong_current(self, authenticated_user):
+    def test_password_change_wrong_current(self, db_session, authenticated_user):
         """Test password change with incorrect current password"""
         password_data = {
             "current_password": "WrongPassword123!",
@@ -284,7 +265,7 @@ class TestUpdatePassword:
         assert response.status_code == 400
         assert "incorrect" in response.json()["detail"].lower()
     
-    def test_password_change_mismatch(self, authenticated_user):
+    def test_password_change_mismatch(self, db_session, authenticated_user):
         """Test password change with mismatched new passwords"""
         password_data = {
             "current_password": "TestPass123!",
@@ -299,7 +280,7 @@ class TestUpdatePassword:
         
         assert response.status_code == 422  # Validation error
     
-    def test_password_change_same_as_current(self, authenticated_user):
+    def test_password_change_same_as_current(self, db_session, authenticated_user):
         """Test that new password cannot be same as current"""
         password_data = {
             "current_password": "TestPass123!",
@@ -314,7 +295,7 @@ class TestUpdatePassword:
         
         assert response.status_code == 422  # Validation error
     
-    def test_password_change_then_login(self, authenticated_user, test_user_data):
+    def test_password_change_then_login(self, db_session, authenticated_user, test_user_data):
         """Test that new password works for login after change"""
         # Change password
         new_password = "BrandNewPass789!"
@@ -344,7 +325,7 @@ class TestUpdatePassword:
         assert response.status_code == 200
         assert "access_token" in response.json()
     
-    def test_password_change_unauthenticated(self):
+    def test_password_change_unauthenticated(self, db_session):
         """Test password change without authentication"""
         password_data = {
             "current_password": "TestPass123!",
@@ -358,7 +339,7 @@ class TestUpdatePassword:
 class TestProfileUpdatePersistence:
     """Test that profile updates persist correctly in database"""
     
-    def test_profile_update_persists_after_relogin(self, authenticated_user, test_user_data):
+    def test_profile_update_persists_after_relogin(self, db_session, authenticated_user, test_user_data):
         """Test that profile changes persist after logging out and back in"""
         # Update profile
         update_data = {"first_name": "Persistent", "last_name": "Update"}
@@ -385,7 +366,7 @@ class TestProfileUpdatePersistence:
         assert data["first_name"] == "Persistent"
         assert data["last_name"] == "Update"
     
-    def test_username_update_affects_login(self, authenticated_user, test_user_data):
+    def test_username_update_affects_login(self, db_session, authenticated_user, test_user_data):
         """Test that username change requires login with new username"""
         # Update username
         new_username = "newusername123"
@@ -414,8 +395,10 @@ class TestProfileUpdatePersistence:
 class TestConcurrentUserScenarios:
     """Test scenarios with multiple users"""
     
-    def test_two_users_cannot_have_same_email(self, authenticated_user):
+    def test_two_users_cannot_have_same_email(self, db_session, authenticated_user):
         """Test that two users cannot update to the same email"""
+        from app.models.user import User
+        
         # Create second user
         second_user_data = {
             "first_name": "Second",
@@ -425,8 +408,8 @@ class TestConcurrentUserScenarios:
             "password": "TestPass123!",
             "confirm_password": "TestPass123!"
         }
-        response = client.post("/auth/register", json=second_user_data)
-        assert response.status_code == 201
+        second_user = User.register(db_session, second_user_data)
+        db_session.commit()
         
         # Login as second user
         login_data = {
