@@ -118,3 +118,24 @@ def divide(a: Number, b: Number) -> float:
     # Perform division of a by b and return the result as a float
     result = a / b
     return result
+
+def power(base: float, exponent: float) -> float:
+    """
+    Calculate base raised to the power of exponent.
+    
+    Args:
+        base: The base number
+        exponent: The exponent
+        
+    Returns:
+        float: base^exponent
+        
+    Examples:
+        >>> power(2, 3)
+        8.0
+        >>> power(5, 0)
+        1.0
+        >>> power(2, -2)
+        0.25
+    """
+    return base ** exponent

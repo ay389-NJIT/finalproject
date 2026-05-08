@@ -178,6 +178,7 @@ class AbstractCalculation:
             'subtraction': Subtraction,
             'multiplication': Multiplication,
             'division': Division,
+            'power': Power,
         }
         calculation_class = calculation_classes.get(calculation_type.lower())
         if not calculation_class:
@@ -354,3 +355,37 @@ class Division(Calculation):
                 raise ValueError("Cannot divide by zero.")
             result /= value
         return result
+    
+class Power(Calculation):
+    """
+    Exponentiation calculation subclass.
+    
+    Implements raising a base number to an exponent.
+    Examples:
+        [2, 3] -> 2^3 = 8
+        [5, 0] -> 5^0 = 1
+        [2, -2] -> 2^(-2) = 0.25
+        [4, 0.5] -> 4^0.5 = 2 (square root)
+    """
+    __mapper_args__ = {"polymorphic_identity": "power"}
+
+    def get_result(self) -> float:
+        """
+        Calculate base raised to the power of exponent.
+        
+        Takes exactly 2 numbers: base and exponent.
+        Uses Python's ** operator for exponentiation.
+        
+        Returns:
+            float: base^exponent
+            
+        Raises:
+            ValueError: If inputs are not a list or if not exactly 2 numbers provided
+        """
+        if not isinstance(self.inputs, list):
+            raise ValueError("Inputs must be a list of numbers.")
+        if len(self.inputs) != 2:
+            raise ValueError("Power operation requires exactly two numbers: base and exponent.")
+        
+        base, exponent = self.inputs[0], self.inputs[1]
+        return base ** exponent

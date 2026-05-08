@@ -36,6 +36,7 @@ class CalculationType(str, Enum):
     SUBTRACTION = "subtraction"
     MULTIPLICATION = "multiplication"
     DIVISION = "division"
+    POWER = "power"
 
 class CalculationBase(BaseModel):
     """
@@ -124,6 +125,10 @@ class CalculationBase(BaseModel):
         Raises:
             ValueError: If validation fails
         """
+        # Power operation requires exactly 2 inputs
+        if self.type == CalculationType.POWER:
+            if len(self.inputs) != 2:
+                raise ValueError("Power operation requires exactly two numbers: base and exponent")
         if len(self.inputs) < 2:
             raise ValueError("At least two numbers are required for calculation")
         if self.type == CalculationType.DIVISION:
