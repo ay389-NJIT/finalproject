@@ -57,7 +57,7 @@ class CalculationBase(BaseModel):
         ...,  # The ... means this field is required
         description="List of numeric inputs for the calculation",
         example=[10.5, 3, 2],
-        min_items=2  # Ensures at least 2 numbers are provided
+        min_length=1  # Ensures at least 2 numbers are provided
     )
 
     @field_validator("type", mode="before")
