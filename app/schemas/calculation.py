@@ -282,3 +282,61 @@ class CalculationResponse(CalculationBase):
             }
         }
     )
+    
+class CalculationStatistics(BaseModel):
+    """
+    Schema for calculation statistics response.
+    
+    Provides summary metrics about a user's calculation history.
+    """
+    total_calculations: int = Field(
+        ...,
+        description="Total number of calculations performed",
+        example=42
+    )
+    calculations_by_type: dict = Field(
+        ...,
+        description="Breakdown of calculations by operation type",
+        example={
+            "addition": 15,
+            "subtraction": 10,
+            "multiplication": 8,
+            "division": 5,
+            "power": 3,
+            "square_root": 1
+        }
+    )
+    most_used_operation: Optional[str] = Field(
+        None,
+        description="The most frequently used calculation type",
+        example="addition"
+    )
+    average_operands: float = Field(
+        ...,
+        description="Average number of operands per calculation",
+        example=2.5
+    )
+    total_operands: int = Field(
+        ...,
+        description="Total number of operands across all calculations",
+        example=105
+    )
+    
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "total_calculations": 42,
+                "calculations_by_type": {
+                    "addition": 15,
+                    "subtraction": 10,
+                    "multiplication": 8,
+                    "division": 5,
+                    "power": 3,
+                    "square_root": 1
+                },
+                "most_used_operation": "addition",
+                "average_operands": 2.5,
+                "total_operands": 105
+            }
+        }
+    }

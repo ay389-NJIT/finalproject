@@ -227,6 +227,58 @@ class Calculation(Base, AbstractCalculation):
         #"with_polymorphic": "*"  # Eager load all subclass columns (commented out)
     }
 
+    @classmethod
+    def get_user_statistics(cls, db, user_id: uuid.UUID) -> dict:
+        """
+        Get calculation statistics for a specific user.
+        
+        Args:
+            db: SQLAlchemy database session
+            user_id: UUID of the user
+            
+        Returns:
+            dict: Statistics including total calculations, breakdown by type, etc.
+        """
+        from sqlalchemy import func
+        
+        # Get all calculations for the user
+        calculations = db.query(cls).filter(cls.user_id == user_id).all()
+        
+        if not calculations:
+            return {
+                "total_calculations": 0,
+                "calculations_by_type": {},
+                "most_used_operation": None,
+                "average_operands": 0,
+                "total_operands": 0
+            }
+        
+        # Calculate statistics
+        total_calculations = len(calculations)
+        
+        # Count by type
+        type_counts = {}
+        total_operands = 0
+        
+        for calc in calculations:
+            calc_type = calc.type
+            type_counts[calc_type] = type_counts.get(calc_type, 0) + 1
+            total_operands += len(calc.inputs) if calc.inputs else 0
+        
+        # Find most used operation
+        most_used_operation = max(type_counts.items(), key=lambda x: x[1])[0] if type_counts else None
+        
+        # Calculate average operands
+        average_operands = round(total_operands / total_calculations, 2) if total_calculations > 0 else 0
+        
+        return {
+            "total_calculations": total_calculations,
+            "calculations_by_type": type_counts,
+            "most_used_operation": most_used_operation,
+            "average_operands": average_operands,
+            "total_operands": total_operands
+        }
+
 class Addition(Calculation):
     """
     Addition calculation subclass.

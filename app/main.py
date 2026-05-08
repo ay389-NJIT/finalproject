@@ -35,7 +35,7 @@ import uvicorn  # ASGI server for running FastAPI apps
 from app.auth.dependencies import get_current_active_user, get_current_user_from_db
 from app.models.calculation import Calculation  # Database model for calculations
 from app.models.user import User  # Database model for users
-from app.schemas.calculation import CalculationBase, CalculationResponse, CalculationUpdate  # API request/response schemas
+from app.schemas.calculation import CalculationBase, CalculationResponse, CalculationUpdate, CalculationStatistics  # API request/response schemas
 from app.schemas.token import TokenResponse  # API token schema
 from app.schemas.user import UserCreate, UserResponse, UserLogin, UserUpdate, PasswordUpdate  # User schemas
 from app.database import Base, get_db, engine  # Database connection
@@ -462,6 +462,26 @@ def update_password(
     db.commit()
     
     return {"message": "Password updated successfully"}
+
+# ------------------------------------------------------------------------------
+# Calculation Statistics API Endpoint
+# ------------------------------------------------------------------------------
+@app.get("/api/stats", response_model=CalculationStatistics, tags=["statistics"])
+def get_calculation_statistics(
+    current_user: User = Depends(get_current_user_from_db),
+    db: Session = Depends(get_db)
+):
+    """
+    Get calculation statistics for the current user.
+    
+    Returns:
+        CalculationStatistics: Statistics including total calculations,
+                               breakdown by type, most used operation, etc.
+    """
+    from app.models.calculation import Calculation
+    
+    stats = Calculation.get_user_statistics(db, current_user.id)
+    return stats
 
 # ------------------------------------------------------------------------------
 # Main Block to Run the Server
