@@ -37,7 +37,7 @@ from app.models.calculation import Calculation  # Database model for calculation
 from app.models.user import User  # Database model for users
 from app.schemas.calculation import CalculationBase, CalculationResponse, CalculationUpdate  # API request/response schemas
 from app.schemas.token import TokenResponse  # API token schema
-from app.schemas.user import UserCreate, UserResponse, UserLogin  # User schemas
+from app.schemas.user import UserCreate, UserResponse, UserLogin, UserUpdate, PasswordUpdate  # User schemas
 from app.database import Base, get_db, engine  # Database connection
 
 
@@ -392,6 +392,71 @@ def delete_calculation(
     db.delete(calculation)
     db.commit()
     return None
+
+# ------------------------------------------------------------------------------
+# User Profile Management API Endpoints
+# ------------------------------------------------------------------------------
+@app.get("/profile", response_class=HTMLResponse, tags=["web"])
+def profile_page(request: Request):
+    """User profile management page."""
+    return templates.TemplateResponse("profile.html", {"request": request})
+
+
+@app.get("/api/profile", response_model=UserResponse, tags=["profile"])
+def get_profile(
+    current_user = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get current user profile."""
+    return current_user
+
+
+@app.put("/api/profile", response_model=UserResponse, tags=["profile"])
+def update_profile(
+    user_update: UserUpdate,
+    current_user = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Update user profile information."""
+    if user_update.email and user_update.email != current_user.email:
+        existing_user = db.query(User).filter(User.email == user_update.email).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already registered")
+    
+    if user_update.username and user_update.username != current_user.username:
+        existing_user = db.query(User).filter(User.username == user_update.username).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Username already taken")
+    
+    if user_update.first_name is not None:
+        current_user.first_name = user_update.first_name
+    if user_update.last_name is not None:
+        current_user.last_name = user_update.last_name
+    if user_update.email is not None:
+        current_user.email = user_update.email
+    if user_update.username is not None:
+        current_user.username = user_update.username
+    
+    current_user.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@app.put("/api/profile/password", tags=["profile"])
+def update_password(
+    password_update: PasswordUpdate,
+    current_user = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Update user password."""
+    if not User.verify_password(password_update.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    current_user.hashed_password = User.hash_password(password_update.new_password)
+    current_user.updated_at = datetime.utcnow()
+    db.commit()
+    return {"message": "Password updated successfully"}
 
 
 # ------------------------------------------------------------------------------
