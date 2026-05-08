@@ -57,7 +57,7 @@ def test_calculation_create_invalid_inputs():
 def test_calculation_create_unsupported_type():
     """Test CalculationCreate fails if an unsupported calculation type is provided."""
     data = {
-        "type": "square_root",  # Unsupported type
+        "type": "logarithm",  # Unsupported type
         "inputs": [25],
         "user_id": uuid4()
     }

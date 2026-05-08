@@ -4,6 +4,7 @@ Integration Tests for Profile Management API Routes
 Tests profile endpoints using shared database fixtures from conftest.py.
 """
 import pytest
+import uuid
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -14,12 +15,13 @@ client = TestClient(app)
 
 @pytest.fixture
 def test_user_data():
-    """Reusable test user data"""
+    """Reusable test user data with unique email/username"""
+    unique_id = str(uuid.uuid4())[:8]
     return {
         "first_name": "Test",
         "last_name": "User",
-        "email": "test@example.com",
-        "username": "testuser",
+        "email": f"test_{unique_id}@example.com",
+        "username": f"testuser_{unique_id}",
         "password": "TestPass123!",
         "confirm_password": "TestPass123!"
     }
@@ -108,10 +110,11 @@ class TestUpdateProfile:
     
     def test_update_multiple_fields(self, db_session, authenticated_user):
         """Test updating multiple fields at once"""
+        unique_id = str(uuid.uuid4())[:8]
         update_data = {
             "first_name": "NewFirst",
             "last_name": "NewLast",
-            "email": "newemail@example.com"
+            "email": f"newemail_{unique_id}@example.com"
         }
         response = client.put(
             "/api/profile",
@@ -123,18 +126,19 @@ class TestUpdateProfile:
         data = response.json()
         assert data["first_name"] == "NewFirst"
         assert data["last_name"] == "NewLast"
-        assert data["email"] == "newemail@example.com"
+        assert data["email"] == f"newemail_{unique_id}@example.com"
     
     def test_update_email_duplicate(self, db_session, authenticated_user):
         """Test updating to an email that already exists"""
         from app.models.user import User
         
-        # Create second user
+        # Create second user with unique credentials
+        unique_id = str(uuid.uuid4())[:8]
         second_user_data = {
             "first_name": "Second",
             "last_name": "User",
-            "email": "second@example.com",
-            "username": "seconduser",
+            "email": f"second_{unique_id}@example.com",
+            "username": f"seconduser_{unique_id}",
             "password": "TestPass123!",
             "confirm_password": "TestPass123!"
         }
@@ -142,7 +146,7 @@ class TestUpdateProfile:
         db_session.commit()
         
         # Try to update first user's email to second user's email
-        update_data = {"email": "second@example.com"}
+        update_data = {"email": f"second_{unique_id}@example.com"}
         response = client.put(
             "/api/profile",
             json=update_data,
@@ -156,12 +160,13 @@ class TestUpdateProfile:
         """Test updating to a username that already exists"""
         from app.models.user import User
         
-        # Create second user
+        # Create second user with unique credentials
+        unique_id = str(uuid.uuid4())[:8]
         second_user_data = {
             "first_name": "Second",
             "last_name": "User",
-            "email": "second@example.com",
-            "username": "seconduser",
+            "email": f"second_{unique_id}@example.com",
+            "username": f"seconduser_{unique_id}",
             "password": "TestPass123!",
             "confirm_password": "TestPass123!"
         }
@@ -169,7 +174,7 @@ class TestUpdateProfile:
         db_session.commit()
         
         # Try to update first user's username to second user's username
-        update_data = {"username": "seconduser"}
+        update_data = {"username": f"seconduser_{unique_id}"}
         response = client.put(
             "/api/profile",
             json=update_data,
@@ -368,8 +373,9 @@ class TestProfileUpdatePersistence:
     
     def test_username_update_affects_login(self, db_session, authenticated_user, test_user_data):
         """Test that username change requires login with new username"""
-        # Update username
-        new_username = "newusername123"
+        # Update username to something unique
+        unique_id = str(uuid.uuid4())[:8]
+        new_username = f"newusername_{unique_id}"
         update_data = {"username": new_username}
         response = client.put(
             "/api/profile",
@@ -399,12 +405,13 @@ class TestConcurrentUserScenarios:
         """Test that two users cannot update to the same email"""
         from app.models.user import User
         
-        # Create second user
+        # Create second user with unique credentials
+        unique_id = str(uuid.uuid4())[:8]
         second_user_data = {
             "first_name": "Second",
             "last_name": "User",
-            "email": "second@example.com",
-            "username": "seconduser",
+            "email": f"second_{unique_id}@example.com",
+            "username": f"seconduser_{unique_id}",
             "password": "TestPass123!",
             "confirm_password": "TestPass123!"
         }

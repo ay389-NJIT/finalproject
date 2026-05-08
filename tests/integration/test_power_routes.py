@@ -1,9 +1,11 @@
 """
 Integration Tests for Power Operation API Routes
 
-Tests power calculation endpoints using shared database fixtures.
+Tests power calculation endpoints using shared database fixtures from conftest.py.
+Follows the same pattern as the original test files.
 """
 import pytest
+import uuid
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -14,12 +16,13 @@ client = TestClient(app)
 
 @pytest.fixture
 def test_user_data():
-    """Reusable test user data"""
+    """Reusable test user data with unique email/username"""
+    unique_id = str(uuid.uuid4())[:8]
     return {
         "first_name": "Power",
         "last_name": "Test",
-        "email": "power@example.com",
-        "username": "poweruser",
+        "email": f"power_{unique_id}@example.com",
+        "username": f"poweruser_{unique_id}",
         "password": "TestPass123!",
         "confirm_password": "TestPass123!"
     }
@@ -30,7 +33,7 @@ def authenticated_user(db_session, test_user_data):
     """Create user and return authentication token"""
     from app.models.user import User
     
-    # Register user using User.register
+    # Register user using User.register (same pattern as original tests)
     user = User.register(db_session, test_user_data)
     db_session.commit()
     
@@ -46,7 +49,8 @@ def authenticated_user(db_session, test_user_data):
     return {
         "token": token,
         "headers": {"Authorization": f"Bearer {token}"},
-        "user_data": test_user_data
+        "user_data": test_user_data,
+        "user": user
     }
 
 
@@ -241,3 +245,7 @@ class TestPowerCalculationAPI:
         power_calcs = [c for c in calculations if c["type"] == "power"]
         assert len(power_calcs) >= 1
         assert any(c["inputs"] == [2, 8] and c["result"] == 256.0 for c in power_calcs)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
