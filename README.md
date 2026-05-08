@@ -12,16 +12,17 @@
 - **RESTful API:** Complete backend API with interactive Swagger documentation
 - **Docker Deployment:** Multi-container setup with PostgreSQL database
 - **CI/CD Pipeline:** Automated testing and Docker Hub deployment via GitHub Actions
-
+---
 **Additional Features**
-**Expontential Capabilities:**
+- **Expontential Capabilities:**
 - Calculate base^exponent
 - Support for positive exponents
 - Support for zero exponent
 - Support for negative exponents
 - Support for fractional exponents
 - Requires exactly two inputs
-**Square Root Capabilites:**
+---
+- **Square Root Capabilites:**
 - Calculate square root of positive numbers
 - Perfect squares
 - Non-perfect squares
@@ -29,11 +30,13 @@
 - Decimal inputs
 - Validates against negative inputs
 - Requires exactly one input
+---
 **User Profile & Password Change:** 
 - View current profile information
 - Update username, email, first name, last name
 - Change password with current password validation
 - Input validation and error handling
+---
 **Calculation History:**
 - Display count of all user calculations
 - Track and display frequently used operation
@@ -67,13 +70,16 @@ pip install playwright # python packages will be downloaded with requirements.tx
 5. **Generate Personal Token**
 - Account Settings ->
 - Personal Access Tokens ->
-- Name Token, Set to Read,Write,Delete
+- Name Token ->
+- Set to Read,Write,Delete
 
 6. **Create Secrets in GitHub Repository**
 - Repository Settings ->
 - Secrets and Variables -> 
 - Actions ->
-- 2 New Repository Secrets -> (1) DOCKERHUB_USERNAME = your username; (2) DOCKERHUB_TOKEN = generated Docker access token
+- 2 New Repository Secrets -> 
+- (1) DOCKERHUB_USERNAME = your DockerHub username
+- (2) DOCKERHUB_TOKEN = generated R,W,D access token from DockerHub
 
 7. **Start Application with Docker Compose**
 ```bash
